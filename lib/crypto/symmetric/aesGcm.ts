@@ -1,16 +1,12 @@
-﻿import { bytesToBase64, base64ToBytes } from "../utils/encoding";
+import { bytesToBase64, base64ToBytes } from "../utils/encoding";
 
-const NONCE_LENGTH_BYTES = 12; // 96 bits — standard/recommended for AES-GCM
+const NONCE_LENGTH_BYTES = 12;
 
 export interface EncryptedPayload {
-  nonce: string; // base64
-  ciphertext: string; // base64 — includes the auth tag, appended by Web Crypto
+  nonce: string;
+  ciphertext: string;
 }
 
-/**
- * Encrypts plaintext with AES-256-GCM under the given key.
- * Generates a fresh random nonce per call — never pass in a reused nonce.
- */
 export async function encrypt(
   plaintext: string,
   key: CryptoKey
@@ -19,9 +15,9 @@ export async function encrypt(
   const encoded = new TextEncoder().encode(plaintext);
 
   const ciphertextBuffer = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv: nonce },
+    { name: "AES-GCM", iv: nonce as BufferSource },
     key,
-    encoded
+    encoded as BufferSource
   );
 
   return {
@@ -30,11 +26,6 @@ export async function encrypt(
   };
 }
 
-/**
- * Decrypts a payload produced by encrypt(). Throws if the auth tag
- * doesn't verify — i.e. if the ciphertext was tampered with or the
- * wrong key/nonce is used. Never swallow that error silently.
- */
 export async function decrypt(
   payload: EncryptedPayload,
   key: CryptoKey
@@ -43,9 +34,9 @@ export async function decrypt(
   const ciphertext = base64ToBytes(payload.ciphertext);
 
   const plaintextBuffer = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: nonce },
+    { name: "AES-GCM", iv: nonce as BufferSource },
     key,
-    ciphertext
+    ciphertext as BufferSource
   );
 
   return new TextDecoder().decode(plaintextBuffer);
