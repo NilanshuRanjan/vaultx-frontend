@@ -1,16 +1,8 @@
-﻿import { deriveSharedKey } from "./x25519";
+import { deriveSharedKey } from "./x25519";
 import { encrypt, decrypt } from "../symmetric/aesGcm";
 import type { EncryptedPayload } from "../symmetric/aesGcm";
-import { bytesToBase64, base64ToBytes } from "../utils/encoding";
+import { bytesToBase64, base64ToBytes, toBufferSource } from "../utils/encoding";
 
-/**
- * Called on the EXISTING trusted device (Device A) once it has
- * received Device B's public key (out of band, via the server).
- *
- * extractableVaultKey MUST come from deriveExtractableVaultKeyForSync(),
- * not from the primary non-extractable vaultKey used elsewhere in the
- * app - passing the normal vaultKey here would throw, by design.
- */
 export async function wrapVaultKeyForNewDevice(
   extractableVaultKey: CryptoKey,
   ownPrivateKey: CryptoKey,
@@ -24,12 +16,6 @@ export async function wrapVaultKeyForNewDevice(
   return payload;
 }
 
-/**
- * Called on the NEW device (Device B) after receiving the wrapped
- * VEK from the server. Unwraps it into a usable, non-extractable
- * CryptoKey - the new device gets the same strict default everyone
- * else has, even though Device A's copy was briefly extractable.
- */
 export async function unwrapVaultKeyOnNewDevice(
   wrappedPayload: EncryptedPayload,
   ownPrivateKey: CryptoKey,
@@ -41,7 +27,7 @@ export async function unwrapVaultKeyOnNewDevice(
 
   return crypto.subtle.importKey(
     "raw",
-    rawVaultKeyBytes,
+    toBufferSource(rawVaultKeyBytes),
     { name: "AES-GCM" },
     false,
     ["encrypt", "decrypt"]

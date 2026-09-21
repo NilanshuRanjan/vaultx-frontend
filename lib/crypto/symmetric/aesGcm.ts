@@ -1,4 +1,4 @@
-import { bytesToBase64, base64ToBytes } from "../utils/encoding";
+import { bytesToBase64, base64ToBytes, toBufferSource } from "../utils/encoding";
 
 const NONCE_LENGTH_BYTES = 12;
 
@@ -15,9 +15,9 @@ export async function encrypt(
   const encoded = new TextEncoder().encode(plaintext);
 
   const ciphertextBuffer = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv: nonce as BufferSource },
+    { name: "AES-GCM", iv: toBufferSource(nonce) },
     key,
-    encoded as BufferSource
+    toBufferSource(encoded)
   );
 
   return {
@@ -34,9 +34,9 @@ export async function decrypt(
   const ciphertext = base64ToBytes(payload.ciphertext);
 
   const plaintextBuffer = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: nonce as BufferSource },
+    { name: "AES-GCM", iv: toBufferSource(nonce) },
     key,
-    ciphertext as BufferSource
+    toBufferSource(ciphertext)
   );
 
   return new TextDecoder().decode(plaintextBuffer);

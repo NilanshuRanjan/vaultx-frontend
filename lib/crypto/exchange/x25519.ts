@@ -1,13 +1,4 @@
-﻿/**
- * X25519 ECDH key exchange for multi-device VEK sharing.
- *
- * Flow: Device A (source of truth) derives a shared secret from its
- * own private key + Device B's public key, uses that to wrap the
- * VEK, and sends only the wrapped VEK over the network. Device B
- * derives the SAME shared secret independently (its private key +
- * Device A's public key) and unwraps it locally. The shared secret
- * itself is never transmitted.
- */
+import { toBufferSource } from "../utils/encoding";
 
 export interface X25519KeyPair {
   publicKey: CryptoKey;
@@ -31,17 +22,13 @@ export async function exportPublicKeyRaw(publicKey: CryptoKey): Promise<Uint8Arr
 export async function importPublicKeyRaw(rawBytes: Uint8Array): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     "raw",
-    rawBytes,
+    toBufferSource(rawBytes),
     { name: "X25519" },
     true,
     []
   );
 }
 
-/**
- * Derives a shared AES-256-GCM key from ECDH output, run through
- * HKDF. Never use raw ECDH bytes directly as an encryption key.
- */
 export async function deriveSharedKey(
   privateKey: CryptoKey,
   peerPublicKey: CryptoKey
@@ -61,10 +48,10 @@ export async function deriveSharedKey(
   );
 
   const info = new TextEncoder().encode("vaultx-device-sync-shared-key-v1");
-  const salt = new Uint8Array(16); // zero salt: both sides derive identically, no coordination needed
+  const salt = new Uint8Array(16);
 
   return crypto.subtle.deriveKey(
-    { name: "HKDF", hash: "SHA-256", salt, info },
+    { name: "HKDF", hash: "SHA-256", salt: toBufferSource(salt), info: toBufferSource(info) },
     baseKey,
     { name: "AES-GCM", length: 256 },
     false,
